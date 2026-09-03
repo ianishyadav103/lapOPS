@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAP-OPS Master Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { darkbg: '#0b0f17', cardbg: '#111827' }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-darkbg text-slate-100 font-sans antialiased min-h-screen">
+    <header
+        class="border-b border-slate-800 bg-cardbg/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+            <div class="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-lg text-white">L
+            </div>
+            <span
+                class="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">LAP-OPS</span>
+            <span class="text-xs bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full border border-slate-700">Lab Fleet
+                Orchestrator</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span
+                class="flex items-center text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-3 py-1 rounded-full">
+                <span class="h-2 w-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span> Local LAN Mode
+            </span>
+        </div>
+    </header>
+
+    <main class="p-6 max-w-7xl mx-auto space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <section class="bg-cardbg border border-slate-800 rounded-xl p-5 shadow-xl space-y-4">
+                <div>
+                    <h2 class="text-base font-semibold text-slate-100">Quick Package Deployment</h2>
+                    <p class="text-xs text-slate-400">Dispatch pre-configured installer packages over LAN</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button
+                        onclick="deployPreset('python-3.11.exe', '/quiet InstallAllUsers=1 PrependPath=1', 'C:\\Program Files\\Python311')"
+                        class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium px-4 py-2.5 rounded-lg transition shadow-lg shadow-blue-600/20">
+                        ⚡ Deploy Python 3.11
+                    </button>
+                    <button onclick="deployPreset('jdk-17.msi', '/qn', 'C:\\Program Files\\Java\\jdk-17')"
+                        class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium px-4 py-2.5 rounded-lg transition shadow-lg shadow-indigo-600/20">
+                        ⚡ Deploy Java JDK 17
+                    </button>
+                    <button
+                        onclick="deployPreset('ChromeSetup.exe', '/silent /install', 'C:\\Program Files\\Google\\Chrome')"
+                        class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-4 py-2.5 rounded-lg transition shadow-lg shadow-emerald-600/20">
+                        ⚡ Deploy Chrome
+                    </button>
+                    <button onclick="dispatchCustom({action_type: 'CLEAN_TEMPS'})"
+                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium px-4 py-2.5 rounded-lg border border-slate-700 transition">
+                        🧹 Flush Temp Cache
+                    </button>
+                </div>
+            </section>
+
+            <section class="bg-cardbg border border-slate-800 rounded-xl p-5 shadow-xl space-y-4">
+                <div>
+                    <h2 class="text-base font-semibold text-slate-100">Custom Action Dispatcher</h2>
+                    <p class="text-xs text-slate-400">Delete any directory or push custom installers directly</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="space-y-2 border-r border-slate-800 pr-3">
+                        <label class="text-xs font-medium text-slate-300">Delete Target Directory / File</label>
+                        <input type="text" id="targetPath" placeholder="C:\Program Files\OldApp"
+                            class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-rose-500 font-mono">
+                        <button onclick="deleteTargetPath()"
+                            class="w-full bg-rose-950 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs font-medium py-1.5 rounded transition">
+                            🗑️ Delete Target Path
+                        </button>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-medium text-slate-300">Deploy Any Installer File</label>
+                        <input type="text" id="customFile" placeholder="vscode_setup.exe"
+                            class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono">
+                        <input type="text" id="customArgs" placeholder="/verysilent /norestart"
+                            class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono">
+                        <button onclick="deployCustomFile()"
+                            class="w-full bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-medium py-1.5 rounded transition">
+                            🚀 Dispatch Custom Package
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-4">
+                <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Connected Lab Fleet</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="fleetGrid">
+                    <div id="noFleetMsg"
+                        class="col-span-full border border-dashed border-slate-800 rounded-xl p-8 text-center text-slate-500 text-xs space-y-1">
+                        <p class="font-medium text-slate-400">📡 No active lab nodes connected.</p>
+                        <p>Launch <code class="text-blue-400">agent.exe</code> on client PCs to register them in
+                            real-time.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Live Execution Console</h3>
+                <div class="bg-black border border-slate-800 rounded-xl p-4 font-mono text-xs h-[420px] overflow-y-auto space-y-2 text-slate-300 shadow-inner"
+                    id="consoleLog">
+                    <p class="text-slate-500">[SYSTEM] LAP-OPS Master Engine Online.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const ws = new WebSocket(`ws://${location.host}/ws/dashboard`);
+        const consoleLog = document.getElementById('consoleLog');
+
+        function appendLog(msg, colorClass = "text-slate-300") {
+            const p = document.createElement('p');
+            const timestamp = new Date().toLocaleTimeString();
+            p.className = `${colorClass}`;
+            p.innerText = `[${timestamp}] ${msg}`;
+            consoleLog.appendChild(p);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+function createOrGetCard(agentId) {
+    const noFleetMsg = document.getElementById('noFleetMsg');
+    if (noFleetMsg) noFleetMsg.remove();
+
+    let card = document.getElementById(`card-${agentId}`);
+    if (!card) {
+        const fleetGrid = document.getElementById('fleetGrid');
+        card = document.createElement('div');
+        card.id = `card-${agentId}`;
+        card.className = "bg-cardbg border border-slate-800 rounded-xl p-5 relative animate-fade-in";
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h4 class="font-bold text-slate-100 flex items-center gap-2">LAB-${agentId}</h4>
+                    <p class="text-xs text-slate-400 font-mono">Windows Node</p>
+                </div>
+                <span class="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" title="Online"></span>
+            </div>
+
+            <div class="space-y-3 border-t border-slate-800 pt-3">
+                <!-- CPU Metric Block -->
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-400">CPU Load</span>
+                        <span class="text-slate-200 font-mono">
+                            <span id="cpu-${agentId}">0%</span>
+                            <span class="text-slate-500">|</span>
+                            <span class="text-orange-400" id="cpuTemp-${agentId}">-- °C</span>
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" id="cpuBar-${agentId}" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- GPU Metric Block -->
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-400">NVIDIA GPU Load</span>
+                        <span class="text-slate-200 font-mono">
+                            <span id="gpu-${agentId}">0%</span>
+                            <span class="text-slate-500">|</span>
+                            <span class="text-purple-400" id="gpuTemp-${agentId}">-- °C</span>
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-purple-500 h-1.5 rounded-full transition-all duration-500" id="gpuBar-${agentId}" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- RAM Metric Block -->
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-400">RAM Allocation</span>
+                        <span class="text-slate-200 font-mono" id="ram-${agentId}">0 GB</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-indigo-500 h-1.5 rounded-full transition-all duration-500" id="ramBar-${agentId}" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- SSD Metric Block -->
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-400">SSD (C: Drive) Free</span>
+                        <span class="text-slate-200 font-mono" id="ssd-${agentId}">0 GB Free</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                        <div class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" id="ssdBar-${agentId}" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LAN Transfer Bar -->
+            <div id="progressContainer-${agentId}" class="hidden mt-4 pt-3 border-t border-slate-800 space-y-1">
+                <div class="flex justify-between text-xs">
+                    <span class="text-blue-400 font-medium">Streaming Package over LAN...</span>
+                    <span class="text-blue-400 font-mono font-bold" id="progressText-${agentId}">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-200" id="progressBar-${agentId}" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Node Status Footer -->
+            <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs">
+                <span class="text-slate-400">Status:</span>
+                <span class="font-medium text-emerald-400 font-mono" id="status-${agentId}">Idle / Ready</span>
+            </div>
+        `;
+        fleetGrid.appendChild(card);
+    }
+    return card;
+}
+
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    const agentId = data.agent_id || "PC-01";
+
+    createOrGetCard(agentId);
+
+    if (data.type === 'TELEMETRY') {
+        // CPU Updates
+        document.getElementById(`cpu-${agentId}`).innerText = `${data.cpu}%`;
+        document.getElementById(`cpuBar-${agentId}`).style.width = `${data.cpu}%`;
+        
+        const cpuTempElem = document.getElementById(`cpuTemp-${agentId}`);
+        if (cpuTempElem) {
+            cpuTempElem.innerText = (data.cpu_temp !== null && data.cpu_temp !== undefined) ? `${data.cpu_temp} °C` : 'N/A';
+        }
+
+        // GPU Updates
+        if (data.gpu_pct !== undefined) {
+            document.getElementById(`gpu-${agentId}`).innerText = `${data.gpu_pct}%`;
+            document.getElementById(`gpuBar-${agentId}`).style.width = `${data.gpu_pct}%`;
+        }
+        
+        const gpuTempElem = document.getElementById(`gpuTemp-${agentId}`);
+        if (gpuTempElem) {
+            gpuTempElem.innerText = (data.gpu_temp !== undefined && data.gpu_temp > 0) ? `${data.gpu_temp} °C` : 'N/A';
+        }
+
+        // RAM & SSD Updates
+        document.getElementById(`ram-${agentId}`).innerText = `${data.ram_used} / ${data.ram_total} GB`;
+        document.getElementById(`ramBar-${agentId}`).style.width = `${data.ram_pct}%`;
+        document.getElementById(`ssd-${agentId}`).innerText = `${data.ssd_free} GB Free`;
+        document.getElementById(`ssdBar-${agentId}`).style.width = `${data.ssd_pct}%`;
+    } else if (data.type === 'PROGRESS') {
+        const prog = document.getElementById(`progressContainer-${agentId}`);
+        if (prog) prog.classList.remove('hidden');
+        document.getElementById(`progressText-${agentId}`).innerText = `${data.percent}%`;
+        document.getElementById(`progressBar-${agentId}`).style.width = `${data.percent}%`;
+    } else if (data.type === 'LOG') {
+        appendLog(data.message, data.color);
+    } else if (data.type === 'STATUS') {
+        document.getElementById(`status-${agentId}`).innerText = data.text;
+        if (data.text.includes('Idle') || data.text.includes('Failed') || data.text.includes('Deleted')) {
+            setTimeout(() => { 
+                const prog = document.getElementById(`progressContainer-${agentId}`);
+                if (prog) prog.classList.add('hidden'); 
+            }, 2000);
+        }
+    }
+};
+
+        function dispatchCustom(payload) {
+            appendLog(`[DISPATCH] Instruction dispatched: ${payload.action_type}`, 'text-yellow-400');
+            fetch('/api/dispatch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        function deployPreset(file_name, silent_args, target_dir) {
+            dispatchCustom({
+                action_type: 'INSTALL_PACKAGE',
+                file_name: file_name,
+                silent_args: silent_args,
+                target_dir: target_dir
+            });
+        }
+
+        function deleteTargetPath() {
+            const path = document.getElementById('targetPath').value;
+            if (!path) return alert("Please enter a target path to delete");
+            dispatchCustom({
+                action_type: 'DELETE_PATH',
+                path: path
+            });
+        }
+
+        function deployCustomFile() {
+            const fileName = document.getElementById('customFile').value;
+            const args = document.getElementById('customArgs').value;
+            if (!fileName) return alert("Please enter an installer file name");
+            dispatchCustom({
+                action_type: 'INSTALL_PACKAGE',
+                file_name: fileName,
+                silent_args: args
+            });
+        }
+    </script>
+</body>
+
+</html>
